@@ -32,12 +32,45 @@ import {
 
 const StableUrl = 'https://api.github.com/repos/MetaCubeX/mihomo/releases/latest'
 const AlphaUrl = 'https://api.github.com/repos/MetaCubeX/mihomo/releases/tags/Prerelease-Alpha'
+const SmartUrl = 'https://api.github.com/repos/vernesong/mihomo/releases/tags/Prerelease-Alpha'
 
 const StablePage = 'https://github.com/MetaCubeX/mihomo/releases/latest'
 const AlphaPage = 'https://github.com/MetaCubeX/mihomo/releases/tag/Prerelease-Alpha'
+const SmartPage = 'https://github.com/vernesong/mihomo/releases/tag/Prerelease-Alpha'
 
-export const useCoreBranch = (isAlpha = false) => {
-  const releaseUrl = isAlpha ? AlphaUrl : StableUrl
+const VersionTxtUrl: Partial<Record<Branch, string>> = {
+  [Branch.Alpha]:
+    'https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/version.txt',
+  [Branch.Smart]:
+    'https://github.com/vernesong/mihomo/releases/download/Prerelease-Alpha/version.txt',
+}
+
+const ReleaseUrlMap: Record<Branch, string> = {
+  [Branch.Main]: StableUrl,
+  [Branch.Alpha]: AlphaUrl,
+  [Branch.Smart]: SmartUrl,
+}
+
+const ReleasePageMap: Record<Branch, string> = {
+  [Branch.Main]: StablePage,
+  [Branch.Alpha]: AlphaPage,
+  [Branch.Smart]: SmartPage,
+}
+
+const CacheDirectoryMap: Record<Branch, string> = {
+  [Branch.Main]: 'stable',
+  [Branch.Alpha]: 'alpha',
+  [Branch.Smart]: 'smart',
+}
+
+const VersionMatcherMap: Record<Branch, RegExp> = {
+  [Branch.Main]: /v\S+/,
+  [Branch.Alpha]: /alpha-\S+/i,
+  [Branch.Smart]: /smart-\S+/i,
+}
+
+export const useCoreBranch = (branch: Branch) => {
+  const releaseUrl = ReleaseUrlMap[branch]
 
   const localVersion = ref('')
   const remoteVersion = ref('')
@@ -56,9 +89,9 @@ export const useCoreBranch = (isAlpha = false) => {
   const kernelApiStore = useKernelApiStore()
 
   const restartable = computed(() => {
-    const { branch } = appSettings.app.kernel
+    const currentBranch = appSettings.app.kernel.branch
     if (!kernelApiStore.running) return false
-    return localVersion.value && downloadCompleted.value && (branch === Branch.Alpha) === isAlpha
+    return localVersion.value && downloadCompleted.value && currentBranch === branch
   })
 
   const updatable = computed(
@@ -67,7 +100,7 @@ export const useCoreBranch = (isAlpha = false) => {
 
   const grantable = computed(() => localVersion.value && envStore.env.os !== 'windows')
 
-  const CoreFilePath = `${CoreWorkingDirectory}/${getKernelFileName(isAlpha)}`
+  const CoreFilePath = `${CoreWorkingDirectory}/${getKernelFileName(branch)}`
   const CoreBakFilePath = `${CoreFilePath}.bak`
 
   const downloadCore = async (cpuLevel?: 'v1' | 'v2' | 'v3') => {
@@ -79,7 +112,8 @@ export const useCoreBranch = (isAlpha = false) => {
       if (body.message) throw body.message
 
       const { assets, name } = body
-      const assetName = getKernelAssetFileName(isAlpha ? remoteVersion.value : name, cpuLevel)
+      const assetVersion = branch === Branch.Main ? name : remoteVersion.value || name
+      const assetName = getKernelAssetFileName(assetVersion, cpuLevel)
       const asset = assets.find((v: any) => v.name === assetName)
       if (!asset) throw 'Asset Not Found:' + assetName
       if (asset.uploader.type !== 'Bot') {
@@ -111,7 +145,7 @@ export const useCoreBranch = (isAlpha = false) => {
       await ignoredError(MoveFile, CoreFilePath, CoreBakFilePath)
 
       if (assetName.endsWith('.zip')) {
-        const tmp = `data/.cache/${isAlpha ? 'alpha' : 'stable'}`
+        const tmp = `data/.cache/${CacheDirectoryMap[branch]}`
         await UnzipZIPFile(downloadCacheFile, tmp)
         const name = (await ReadDir(tmp)).find((v) => v.name.startsWith('mihomo'))?.name
         if (!name) throw 'The Core file was not found in the compressed package'
@@ -143,7 +177,8 @@ export const useCoreBranch = (isAlpha = false) => {
     try {
       const res = await Exec(CoreFilePath, ['-v'])
       versionDetail.value = res.trim()
-      return res.match(isAlpha ? /alpha-\S+/ : /v\S+/)?.[0] || ''
+      const matcher = VersionMatcherMap[branch]
+      return res.match(matcher)?.[0] || res.trim().split(/\s+/)[0] || ''
     } catch (error: any) {
       console.log(error)
       showTips && message.error(error)
@@ -156,10 +191,8 @@ export const useCoreBranch = (isAlpha = false) => {
   const getRemoteVersion = async (showTips = false) => {
     remoteVersionLoading.value = true
     try {
-      if (isAlpha) {
-        const { body } = await HttpGet(
-          'https://github.com/MetaCubeX/mihomo/releases/download/Prerelease-Alpha/version.txt',
-        )
+      if (VersionTxtUrl[branch]) {
+        const { body } = await HttpGet(VersionTxtUrl[branch]!)
         return body.trim()
       }
       const { body } = await HttpGet<Record<string, any>>(releaseUrl, {
@@ -205,8 +238,8 @@ export const useCoreBranch = (isAlpha = false) => {
 
     const doRollback = () => MoveFile(CoreBakFilePath, CoreFilePath)
 
-    const { branch } = appSettings.app.kernel
-    const isCurrentRunning = kernelApiStore.running && (branch === Branch.Alpha) === isAlpha
+    const currentBranch = appSettings.app.kernel.branch
+    const isCurrentRunning = kernelApiStore.running && currentBranch === branch
     if (isCurrentRunning) {
       await kernelApiStore.restartCore(doRollback)
     } else {
@@ -217,7 +250,7 @@ export const useCoreBranch = (isAlpha = false) => {
   }
 
   const openReleasePage = () => {
-    BrowserOpenURL(isAlpha ? AlphaPage : StablePage)
+    BrowserOpenURL(ReleasePageMap[branch])
   }
 
   const openFileLocation = async () => {

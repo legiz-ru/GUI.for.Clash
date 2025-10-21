@@ -132,6 +132,11 @@ export const generateProxyGroup = (
     'exclude-filter': ExcludeFilter,
     hidden,
     icon,
+    'policy-priority': policyPriority,
+    uselightgbm = false,
+    collectdata = false,
+    'sample-rate': sampleRate = 1,
+    'prefer-asn': preferAsn = false,
   } = proxyGruoup
 
   const group: any = { name, type, filter, 'exclude-filter': ExcludeFilter, hidden, icon }
@@ -182,6 +187,18 @@ export const generateProxyGroup = (
     })
   } else if (type === ProxyGroup.Relay) {
     Object.assign(group, {})
+  } else if (type === ProxyGroup.Smart) {
+    const smartConfig: Record<string, any> = {
+      strategy,
+      uselightgbm,
+      collectdata,
+      'sample-rate': Number(sampleRate),
+      'prefer-asn': preferAsn,
+    }
+    if (policyPriority) {
+      smartConfig['policy-priority'] = policyPriority
+    }
+    Object.assign(group, smartConfig)
   }
 
   return group
@@ -277,6 +294,23 @@ export const generateConfig = async (originalProfile: ProfileType) => {
     },
     dns: profile.dnsConfig,
     hosts: {},
+  }
+
+  if (config.profile) {
+    const size = config.profile['smart-collector-size']
+    if (size !== undefined) {
+      const value = Number(size)
+      if (!Number.isNaN(value)) {
+        config.profile['smart-collector-size'] = value
+      }
+    }
+  }
+
+  if (config['lgbm-update-interval'] !== undefined) {
+    const value = Number(config['lgbm-update-interval'])
+    if (!Number.isNaN(value)) {
+      config['lgbm-update-interval'] = value
+    }
   }
 
   // step 1

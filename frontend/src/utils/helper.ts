@@ -3,6 +3,7 @@ import { parse } from 'yaml'
 import { deleteConnection, getConnections, useProxy } from '@/api/kernel'
 import { AbsolutePath, Exec, ExitApp, ReadFile, WriteFile } from '@/bridge'
 import { CoreWorkingDirectory } from '@/constant'
+import { Branch } from '@/enums/app'
 import { ProxyGroupType, RulesetBehavior, RulesetFormat } from '@/enums/kernel'
 import i18n from '@/lang'
 import {
@@ -642,12 +643,17 @@ export const exitApp = async () => {
   destroy()
 }
 
-export const getKernelFileName = (isAlpha = false) => {
+export const getKernelFileName = (branch: Branch = Branch.Main) => {
   const envStore = useEnvStore()
   const { os } = envStore.env
   const fileSuffix = { windows: '.exe', linux: '', darwin: '' }[os]
-  const alpha = isAlpha ? '-alpha' : ''
-  return `mihomo${alpha}${fileSuffix}`
+  const suffixMap: Record<Branch, string> = {
+    [Branch.Main]: '',
+    [Branch.Alpha]: '-alpha',
+    [Branch.Smart]: '-smart',
+  }
+  const suffix = suffixMap[branch] ?? ''
+  return `mihomo${suffix}${fileSuffix}`
 }
 
 export const getKernelAssetFileName = (version: string, cpuLevel: 'v1' | 'v2' | 'v3' = 'v3') => {
@@ -670,17 +676,27 @@ export const processMagicVariables = (str: string) => {
   return result
 }
 
-export const getKernelRuntimeEnv = (isAlpha = false) => {
+export const getKernelRuntimeEnv = (branch: Branch = Branch.Main) => {
   const appSettings = useAppSettingsStore()
-  const { env } = isAlpha ? appSettings.app.kernel.alpha : appSettings.app.kernel.main
+  const configMap: Record<Branch, typeof appSettings.app.kernel.main> = {
+    [Branch.Main]: appSettings.app.kernel.main,
+    [Branch.Alpha]: appSettings.app.kernel.alpha,
+    [Branch.Smart]: appSettings.app.kernel.smart,
+  }
+  const { env } = configMap[branch] || appSettings.app.kernel.main
   return Object.entries(env).reduce((p, [key, value]) => {
     p[key] = processMagicVariables(value)
     return p
   }, {} as Recordable)
 }
 
-export const getKernelRuntimeArgs = (isAlpha = false) => {
+export const getKernelRuntimeArgs = (branch: Branch = Branch.Main) => {
   const appSettings = useAppSettingsStore()
-  const { args } = isAlpha ? appSettings.app.kernel.alpha : appSettings.app.kernel.main
+  const configMap: Record<Branch, typeof appSettings.app.kernel.main> = {
+    [Branch.Main]: appSettings.app.kernel.main,
+    [Branch.Alpha]: appSettings.app.kernel.alpha,
+    [Branch.Smart]: appSettings.app.kernel.smart,
+  }
+  const { args } = configMap[branch] || appSettings.app.kernel.main
   return args.map((arg) => processMagicVariables(arg))
 }
