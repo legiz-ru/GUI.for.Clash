@@ -83,6 +83,10 @@ type AppSettings = {
       env: Recordable
       args: string[]
     }
+    smart: {
+      env: Recordable
+      args: string[]
+    }
   }
   addPluginToMenu: boolean
   addGroupToMenu: boolean

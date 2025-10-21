@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import {
@@ -8,7 +9,9 @@ import {
   GlobalClientFingerprintOptions,
   AdvancedConfigDefaults,
 } from '@/constant'
+import { Branch } from '@/enums/app'
 import { type ProfileType } from '@/stores'
+import { useAppSettingsStore } from '@/stores'
 import { generateSecureKey } from '@/utils'
 
 interface Props {
@@ -20,6 +23,9 @@ const props = defineProps<Props>()
 const fields = defineModel<ProfileType['advancedConfig']>({ default: AdvancedConfigDefaults() })
 
 const { t } = useI18n()
+const appSettingsStore = useAppSettingsStore()
+
+const isSmartBranch = computed(() => appSettingsStore.app.kernel.branch === Branch.Smart)
 </script>
 
 <template>
@@ -121,6 +127,24 @@ const { t } = useI18n()
     {{ t('kernel.store-fake-ip') }}
     <Switch v-model="fields.profile['store-fake-ip']" />
   </div>
+  <template v-if="isSmartBranch">
+    <div class="form-item">
+      {{ t('kernel.lgbm-auto-update') }}
+      <Switch v-model="fields['lgbm-auto-update']" />
+    </div>
+    <div class="form-item">
+      {{ t('kernel.lgbm-update-interval') }} ({{ t('format.hours') }})
+      <Input v-model="fields['lgbm-update-interval']" type="number" :min="1" />
+    </div>
+    <div class="form-item">
+      {{ t('kernel.lgbm-url') }}
+      <Input v-model="fields['lgbm-url']" editable />
+    </div>
+    <div class="form-item">
+      {{ t('kernel.smart-collector-size') }} (MB)
+      <Input v-model="fields.profile['smart-collector-size']" type="number" :min="0" />
+    </div>
+  </template>
   <div class="form-item">
     {{ t('kernel.unified-delay') }}
     <Switch v-model="fields['unified-delay']" />

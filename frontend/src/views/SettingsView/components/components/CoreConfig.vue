@@ -1,18 +1,19 @@
 <script lang="ts" setup>
-import { h, inject, ref } from 'vue'
+import { h, inject, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { DefaultCoreConfig, DraggableOptions } from '@/constant'
+import { Branch } from '@/enums/app'
 import { useAppSettingsStore } from '@/stores'
 import { deepClone, message, processMagicVariables } from '@/utils'
 
 import Button from '@/components/Button/index.vue'
 
 interface Props {
-  isAlpha: boolean
+  branch: Branch
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { branch: Branch.Main })
 
 const tabs = [
   { tab: 'settings.kernel.config.env', key: 'env' },
@@ -26,12 +27,25 @@ const handleSubmit = inject('submit') as any
 const { t } = useI18n()
 const appSettings = useAppSettingsStore()
 
-const source = props.isAlpha ? appSettings.app.kernel.alpha : appSettings.app.kernel.main
+const sourceMap: Record<Branch, typeof appSettings.app.kernel.main> = {
+  [Branch.Main]: appSettings.app.kernel.main,
+  [Branch.Alpha]: appSettings.app.kernel.alpha,
+  [Branch.Smart]: appSettings.app.kernel.smart,
+}
 
-const model = ref(deepClone(source))
+const source = computed(() => sourceMap[props.branch])
+
+const model = ref(deepClone(source.value))
+
+watch(
+  () => props.branch,
+  () => {
+    model.value = deepClone(source.value)
+  },
+)
 
 const handleSave = () => {
-  Object.assign(source, model.value)
+  Object.assign(source.value, model.value)
   handleSubmit()
 }
 

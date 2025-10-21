@@ -30,7 +30,7 @@ const handleUseBranch = async (branch: Branch) => {
       :selected="appSettings.app.kernel.branch === Branch.Main"
       @click="handleUseBranch(Branch.Main)"
       title="Stable"
-      class="w-[36%]"
+      class="flex-1"
     >
       <div class="py-4 text-12">
         {{ t('settings.kernel.stable') }}
@@ -40,10 +40,20 @@ const handleUseBranch = async (branch: Branch) => {
       :selected="appSettings.app.kernel.branch === Branch.Alpha"
       @click="handleUseBranch(Branch.Alpha)"
       title="Alpha"
-      class="w-[36%]"
+      class="flex-1"
     >
       <div class="py-4 text-12">
         {{ t('settings.kernel.alpha') }}
+      </div>
+    </Card>
+    <Card
+      :selected="appSettings.app.kernel.branch === Branch.Smart"
+      @click="handleUseBranch(Branch.Smart)"
+      title="Smart"
+      class="flex-1"
+    >
+      <div class="py-4 text-12">
+        {{ t('settings.kernel.smart') }}
       </div>
     </Card>
   </div>

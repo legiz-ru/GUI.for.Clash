@@ -47,9 +47,13 @@ export const AdvancedConfigDefaults = (): ProfileType['advancedConfig'] => ({
     asn: 'https://github.com/xishang0128/geoip/releases/download/latest/GeoLite2-ASN.mmdb',
   },
   'global-ua': 'chrome',
+  'lgbm-auto-update': false,
+  'lgbm-update-interval': 72,
+  'lgbm-url': 'https://github.com/vernesong/mihomo/releases/download/LightGBM-Model/Model.bin',
   profile: {
     'store-selected': true,
     'store-fake-ip': true,
+    'smart-collector-size': 100,
   },
   'lan-allowed-ips': ['0.0.0.0/0', '::/0'],
   'lan-disallowed-ips': [],

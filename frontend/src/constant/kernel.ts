@@ -127,6 +127,17 @@ export const StrategyOptions = [
   },
 ]
 
+export const SmartStrategyOptions = [
+  {
+    label: 'kernel.proxyGroups.strategy.sticky-sessions',
+    value: 'sticky-sessions',
+  },
+  {
+    label: 'kernel.proxyGroups.strategy.round-robin',
+    value: 'round-robin',
+  },
+]
+
 export const RulesTypeOptions = [
   {
     label: 'kernel.rules.type.DOMAIN',

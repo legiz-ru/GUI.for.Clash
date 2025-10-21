@@ -228,12 +228,12 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
     }
   }
 
-  const runCoreProcess = (isAlpha: boolean) => {
+  const runCoreProcess = (branch: Branch) => {
     return new Promise<number | void>((resolve, reject) => {
       let output: string
       const pid = ExecBackground(
-        CoreWorkingDirectory + '/' + getKernelFileName(isAlpha),
-        getKernelRuntimeArgs(isAlpha),
+        CoreWorkingDirectory + '/' + getKernelFileName(branch),
+        getKernelRuntimeArgs(branch),
         (out) => {
           output = out
           logsStore.recordKernelLog(out)
@@ -245,7 +245,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
           onCoreStopped()
           reject(output)
         },
-        { StopOutputKeyword: CoreStopOutputKeyword, Env: getKernelRuntimeEnv(isAlpha) },
+        { StopOutputKeyword: CoreStopOutputKeyword, Env: getKernelRuntimeEnv(branch) },
       ).catch((e) => reject(e))
     })
   }
@@ -290,7 +290,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
 
     logsStore.clearKernelLog()
 
-    const { profile: profileID, branch } = appSettingsStore.app.kernel
+    const { profile: profileID, branch: selectedBranch } = appSettingsStore.app.kernel
     const profile = profilesStore.getProfileById(profileID)
     if (!profile) throw 'Choose a profile first'
 
@@ -299,8 +299,7 @@ export const useKernelApiStore = defineStore('kernelApi', () => {
       await generateConfigFile(profile, (config) =>
         pluginsStore.onBeforeCoreStartTrigger(config, profile),
       )
-      const isAlpha = branch === Branch.Alpha
-      const pid = await runCoreProcess(isAlpha)
+      const pid = await runCoreProcess(selectedBranch)
       pid && (await onCoreStarted(pid))
     } finally {
       starting.value = false

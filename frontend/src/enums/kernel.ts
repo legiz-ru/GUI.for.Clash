@@ -35,6 +35,7 @@ export enum ProxyGroup {
   Fallback = 'fallback',
   Relay = 'relay',
   LoadBalance = 'load-balance',
+  Smart = 'smart',
 }
 
 export enum ProxyGroupType {
@@ -43,6 +44,7 @@ export enum ProxyGroupType {
   Fallback = 'Fallback',
   Relay = 'Relay',
   LoadBalance = 'LoadBalance',
+  Smart = 'Smart',
 }
 
 export enum RuleType {

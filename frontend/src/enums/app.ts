@@ -43,6 +43,7 @@ export enum Color {
 export enum Branch {
   Main = 'main',
   Alpha = 'alpha',
+  Smart = 'smart',
 }
 
 export enum ScheduledTasksType {

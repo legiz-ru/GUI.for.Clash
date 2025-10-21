@@ -50,9 +50,13 @@ export type ProfileType = {
       asn: string
     }
     'global-ua': string
+    'lgbm-auto-update': boolean
+    'lgbm-update-interval': number
+    'lgbm-url': string
     profile: {
       'store-selected'?: boolean
       'store-fake-ip'?: boolean
+      'smart-collector-size'?: number
     }
     'lan-allowed-ips': string[]
     'lan-disallowed-ips': string[]
@@ -115,6 +119,11 @@ export type ProfileType = {
     'exclude-filter': string
     hidden: boolean
     icon: string
+    'policy-priority'?: string
+    uselightgbm?: boolean
+    collectdata?: boolean
+    'sample-rate'?: number
+    'prefer-asn'?: boolean
   }[]
   rulesConfig: {
     id: string
@@ -159,6 +168,41 @@ export const useProfilesStore = defineStore('profiles', () => {
           rule['ruleset-behavior'] = RulesetBehavior.Domain
           rule['ruleset-format'] = RulesetFormat.Yaml
           rule['ruleset-proxy'] = ''
+        }
+      })
+      if (profile.advancedConfig['lgbm-auto-update'] === undefined) {
+        profile.advancedConfig['lgbm-auto-update'] = false
+      }
+      if (profile.advancedConfig['lgbm-update-interval'] === undefined) {
+        profile.advancedConfig['lgbm-update-interval'] = 72
+      }
+      if (!profile.advancedConfig['lgbm-url']) {
+        profile.advancedConfig['lgbm-url'] =
+          'https://github.com/vernesong/mihomo/releases/download/LightGBM-Model/Model.bin'
+      }
+      if (profile.advancedConfig.profile['smart-collector-size'] === undefined) {
+        profile.advancedConfig.profile['smart-collector-size'] = 100
+      }
+      profile.proxyGroupsConfig.forEach((group) => {
+        if (group.type === ProxyGroup.Smart) {
+          if (group['policy-priority'] === undefined) {
+            group['policy-priority'] = ''
+          }
+          if (group.uselightgbm === undefined) {
+            group.uselightgbm = false
+          }
+          if (group.collectdata === undefined) {
+            group.collectdata = false
+          }
+          if (group['sample-rate'] === undefined) {
+            group['sample-rate'] = 1
+          }
+          if (group['prefer-asn'] === undefined) {
+            group['prefer-asn'] = false
+          }
+          if (!['sticky-sessions', 'round-robin'].includes(group.strategy)) {
+            group.strategy = 'sticky-sessions'
+          }
         }
       })
     })

@@ -95,6 +95,7 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
       controllerSensitivity: DefaultControllerSensitivity,
       main: undefined as any,
       alpha: undefined as any,
+      smart: undefined as any,
     },
     addPluginToMenu: false,
     addGroupToMenu: false,
@@ -156,6 +157,10 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     if (!app.value.kernel.main) {
       app.value.kernel.main = DefaultCoreConfig()
       app.value.kernel.alpha = DefaultCoreConfig()
+      app.value.kernel.smart = DefaultCoreConfig()
+    }
+    if (!app.value.kernel.smart) {
+      app.value.kernel.smart = DefaultCoreConfig()
     }
 
     if (app.value.kernel.controllerCloseMode === undefined) {
@@ -198,16 +203,22 @@ export const useAppSettingsStore = defineStore('app-settings', () => {
     }
 
     const files = await ReadDir(CoreWorkingDirectory).catch(() => [])
+    const knownKernelFiles = [
+      getKernelFileName(Branch.Main),
+      getKernelFileName(Branch.Alpha),
+      getKernelFileName(Branch.Smart),
+    ]
     for (const file of files) {
-      if (
-        file.name.startsWith('mihomo') &&
-        ![getKernelFileName(), getKernelFileName(true)].includes(file.name)
-      ) {
-        const isAlpha = file.name.includes('-alpha')
+      if (file.name.startsWith('mihomo') && !knownKernelFiles.includes(file.name)) {
+        const targetBranch = file.name.includes('-alpha')
+          ? Branch.Alpha
+          : file.name.includes('-smart')
+            ? Branch.Smart
+            : Branch.Main
         const isBak = file.name.endsWith('.bak')
         await MoveFile(
           `${CoreWorkingDirectory}/${file.name}`,
-          `${CoreWorkingDirectory}/${getKernelFileName(isAlpha)}${isBak ? '.bak' : ''}`,
+          `${CoreWorkingDirectory}/${getKernelFileName(targetBranch)}${isBak ? '.bak' : ''}`,
         )
       }
     }

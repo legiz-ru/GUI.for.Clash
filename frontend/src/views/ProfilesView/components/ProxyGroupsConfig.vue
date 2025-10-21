@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { GroupsTypeOptions, StrategyOptions, DraggableOptions, BuiltInOutbound } from '@/constant'
+import {
+  GroupsTypeOptions,
+  StrategyOptions,
+  SmartStrategyOptions,
+  DraggableOptions,
+  BuiltInOutbound,
+} from '@/constant'
+import { Branch } from '@/enums/app'
 import { ProxyGroup } from '@/enums/kernel'
-import { type ProfileType, useSubscribesStore } from '@/stores'
+import { type ProfileType, useSubscribesStore, useAppSettingsStore } from '@/stores'
 import { deepClone, sampleID, message } from '@/utils'
 
 type GroupsType = ProfileType['proxyGroupsConfig']
@@ -49,10 +56,53 @@ const fields = ref<GroupsType[number]>({
   'exclude-filter': '',
   hidden: false,
   icon: '',
+  'policy-priority': '',
+  uselightgbm: false,
+  collectdata: false,
+  'sample-rate': 1,
+  'prefer-asn': false,
 })
 
 const { t } = useI18n()
+const appSettingsStore = useAppSettingsStore()
 const subscribesStore = useSubscribesStore()
+
+const isSmartBranch = computed(() => appSettingsStore.app.kernel.branch === Branch.Smart)
+
+const ensureSmartDefaults = (target: GroupsType[number]) => {
+  if (target.type !== ProxyGroup.Smart) return
+  if (target['policy-priority'] === undefined) target['policy-priority'] = ''
+  if (target.uselightgbm === undefined) target.uselightgbm = false
+  if (target.collectdata === undefined) target.collectdata = false
+  if (target['sample-rate'] === undefined) target['sample-rate'] = 1
+  if (target['prefer-asn'] === undefined) target['prefer-asn'] = false
+  if (!['sticky-sessions', 'round-robin'].includes(target.strategy)) {
+    target.strategy = 'sticky-sessions'
+  }
+}
+
+const groupTypeOptions = computed(() => {
+  const baseOptions = GroupsTypeOptions.filter((option) => option.value !== ProxyGroup.Smart)
+  if (isSmartBranch.value || fields.value.type === ProxyGroup.Smart) {
+    return baseOptions.concat({
+      label: 'kernel.proxyGroups.type.smart',
+      value: ProxyGroup.Smart,
+    })
+  }
+  return baseOptions
+})
+
+const isSmartType = computed(() => fields.value.type === ProxyGroup.Smart)
+
+watch(
+  () => fields.value.type,
+  (type) => {
+    if (type === ProxyGroup.Smart) {
+      ensureSmartDefaults(fields.value)
+    }
+  },
+  { immediate: true },
+)
 
 const handleAdd = () => {
   updateGroupId = -1
@@ -72,6 +122,11 @@ const handleAdd = () => {
     'exclude-filter': '',
     hidden: false,
     icon: '',
+    'policy-priority': '',
+    uselightgbm: false,
+    collectdata: false,
+    'sample-rate': 1,
+    'prefer-asn': false,
   }
   showModal.value = true
 }
@@ -106,6 +161,7 @@ const handleClearGroup = async (g: GroupsType[0]) => {
 const handleEditGroup = (index: number) => {
   updateGroupId = index
   fields.value = deepClone(groups.value[index]!)
+  ensureSmartDefaults(fields.value)
   showModal.value = true
 }
 
@@ -309,7 +365,7 @@ subscribesStore.subscribes.forEach(async ({ id, name, proxies }) => {
     </div>
     <div class="form-item">
       {{ t('kernel.proxyGroups.type.name') }}
-      <Radio v-model="fields.type" :options="GroupsTypeOptions" />
+      <Radio v-model="fields.type" :options="groupTypeOptions" />
     </div>
     <div class="form-item">
       {{ t('kernel.proxyGroups.disable-udp') }}
@@ -337,6 +393,39 @@ subscribesStore.subscribes.forEach(async ({ id, name, proxies }) => {
       {{ t('kernel.proxyGroups.strategy.name') }}
       <Radio v-model="fields.strategy" :options="StrategyOptions" />
     </div>
+
+    <template v-if="isSmartType && isSmartBranch">
+      <div class="form-item">
+        {{ t('kernel.proxyGroups.policy-priority') }}
+        <Input v-model="fields['policy-priority']" placeholder="Premium:0.9;SG:1.3" />
+      </div>
+      <div class="form-item">
+        {{ t('kernel.proxyGroups.strategy.name') }}
+        <Radio v-model="fields.strategy" :options="SmartStrategyOptions" />
+      </div>
+      <div class="form-item">
+        {{ t('kernel.proxyGroups.uselightgbm') }}
+        <Switch v-model="fields.uselightgbm" />
+      </div>
+      <div class="form-item">
+        {{ t('kernel.proxyGroups.collectdata') }}
+        <Switch v-model="fields.collectdata" />
+      </div>
+      <div class="form-item">
+        {{ t('kernel.proxyGroups.sample-rate') }}
+        <Input
+          v-model="fields['sample-rate']"
+          type="number"
+          :step="0.1"
+          :min="0"
+          :max="1"
+        />
+      </div>
+      <div class="form-item">
+        {{ t('kernel.proxyGroups.prefer-asn') }}
+        <Switch v-model="fields['prefer-asn']" />
+      </div>
+    </template>
 
     <Divider> {{ t('profile.use') }} & {{ t('profile.proxies') }} </Divider>
 

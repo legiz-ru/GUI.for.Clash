@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { RemoveFile } from '@/bridge'
@@ -7,17 +8,25 @@ import { useCoreBranch } from '@/hooks/useCoreBranch'
 import { useEnvStore, useKernelApiStore } from '@/stores'
 import { message } from '@/utils'
 
+import { Branch } from '@/enums/app'
+
 interface Props {
-  isAlpha: boolean
+  branch: Branch
 }
 
-const props = withDefaults(defineProps<Props>(), { isAlpha: false })
+const props = withDefaults(defineProps<Props>(), { branch: Branch.Main })
 
 const emit = defineEmits(['config'])
 
 const { t } = useI18n()
 const envStore = useEnvStore()
 const kernelApiStore = useKernelApiStore()
+
+const branchTitle = computed(() => {
+  if (props.branch === Branch.Alpha) return 'Alpha'
+  if (props.branch === Branch.Smart) return 'Smart'
+  return t('settings.kernel.name')
+})
 
 const {
   restartable,
@@ -38,7 +47,7 @@ const {
   grantCorePermission,
   openReleasePage,
   openFileLocation,
-} = useCoreBranch(props.isAlpha)
+} = useCoreBranch(props.branch)
 
 const handleClearCoreCache = async () => {
   try {
@@ -57,9 +66,7 @@ const handleClearCoreCache = async () => {
 
 <template>
   <div class="flex items-center px-4 my-12">
-    <div class="mr-8 font-bold text-16">
-      {{ isAlpha ? 'Alpha' : t('settings.kernel.name') }}
-    </div>
+    <div class="mr-8 font-bold text-16">{{ branchTitle }}</div>
     <Button
       @click="rollbackCore"
       v-if="rollbackable"
